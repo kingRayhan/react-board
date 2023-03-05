@@ -4,8 +4,11 @@ import {
   deleteDoc,
   doc,
   Firestore,
+  getDoc,
   getDocs,
+  orderBy,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where,
@@ -26,14 +29,29 @@ export class BoardController {
     return boards;
   }
 
+  async getBoardDetails(boardId: string) {
+    const docRef = doc(this._db, `boards/${boardId}`);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as IBoard;
+    }
+    return null;
+  }
+
   async createBoard(board: IBoard) {
     const collectionRef = collection(this._db, "boards");
-    return addDoc(collectionRef, board);
+    return addDoc(collectionRef, {
+      ...board,
+      createdAt: serverTimestamp(),
+    });
   }
 
   upDateBoard(id: string, board: IBoard) {
     const docRef = doc(this._db, `boards/${id}`);
-    return setDoc(docRef, board);
+    return setDoc(docRef, {
+      ...board,
+      updatedAt: serverTimestamp(),
+    });
   }
 
   async deleteBoard(boardId: string) {

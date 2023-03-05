@@ -1,10 +1,14 @@
-import { AppProps } from "next/app";
-import Head from "next/head";
-import { MantineProvider } from "@mantine/core";
-import NextHeadSeo from "next-head-seo";
-import { Notifications } from "@mantine/notifications";
 import { FirebaseAuthContextProvider } from "@/auth/AuthContext";
 import "@/styles/globals.scss";
+import { MantineProvider } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
+import NextHeadSeo from "next-head-seo";
+import { AppProps } from "next/app";
+import Head from "next/head";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+export const queryClient = new QueryClient();
 
 export default function App(props: AppProps) {
   const { Component, pageProps } = props;
@@ -12,7 +16,7 @@ export default function App(props: AppProps) {
   return (
     <>
       <Head>
-        <title>Page title</title>
+        <title>React Board</title>
         <meta
           name="viewport"
           content="minimum-scale=1, initial-scale=1, width=device-width"
@@ -33,7 +37,9 @@ export default function App(props: AppProps) {
             canonical="https://board.rayhan.dev"
           />
           <Notifications />
-          <Component {...pageProps} />
+          <QueryClientProvider client={queryClient}>
+            <Component {...pageProps} />
+          </QueryClientProvider>
         </FirebaseAuthContextProvider>
       </MantineProvider>
     </>
