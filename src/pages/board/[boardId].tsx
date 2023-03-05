@@ -1,12 +1,18 @@
 import AppLayout from "@/components/layouts/AppLayout";
-import { GetServerSideProps } from "next";
-import React from "react";
+import { GetServerSideProps, NextPage } from "next";
+import React, { useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import {
   DropResult,
   OnDragEndResponder,
   ResponderProvided,
 } from "react-beautiful-dnd";
+import { IBoardColumn } from "@/app/models/board-column.model";
+import withFirebaseProtection from "@/auth/withFirebaseProtection";
+import { ColumnController } from "@/app/controllers/columnController";
+import { getFirestore } from "firebase/firestore";
+import { firebaseApp } from "@/app/firebase/app.firebase";
+import { useQuery } from "@tanstack/react-query";
 const DragDropContext = dynamic(
   () =>
     import("react-beautiful-dnd").then((mod) => {
@@ -47,63 +53,116 @@ const items = [
   },
 ];
 
-const BoardInsidePage = () => {
-  const [boards, setBoards] = React.useState<typeof items>(items);
+interface PageProp {
+  boardId: string;
+}
+
+const BoardInsidePage: NextPage<PageProp> = ({ boardId }) => {
+  const db = getFirestore(firebaseApp);
+  const columnController = useMemo(() => new ColumnController(db), [db]);
+
+  const { data } = useQuery([`columns/${boardId}`], () =>
+    columnController.getColumnsByBoardId(boardId)
+  );
+
+  const [boardColumns, setBoardColumns] = React.useState<IBoardColumn[]>([
+    {
+      index: 0,
+      id: "1",
+      name: "To Do",
+      cards: [
+        {
+          id: "1",
+          title: "Board 1",
+          description: "This is board 1",
+          index: 0,
+        },
+        {
+          id: "2",
+          title: "Board 2",
+          description: "This is board 2",
+          index: 1,
+        },
+        {
+          id: "3",
+          title: "Board 3",
+          description: "This is board 3",
+          index: 2,
+        },
+      ],
+    },
+    {
+      index: 1,
+      id: "2",
+      name: "In Progress",
+    },
+    {
+      index: 2,
+      id: "3",
+      name: "Done",
+    },
+    {
+      index: 3,
+      id: "4",
+      name: "Issues",
+    },
+  ]);
 
   function handleOnDragEnd(result: DropResult, provided: ResponderProvided) {
-    if (!result.destination) return;
-    const items = [...boards];
-    const sourceIndex = result.source.index;
-    const destinationIndex = result.destination.index;
-
-    items[sourceIndex] = boards[destinationIndex];
-    items[destinationIndex] = boards[sourceIndex];  
-    setBoards(items);
+    // if (!result.destination) return;
+    // const items = [...boards];
+    // const sourceIndex = result.source.index;
+    // const destinationIndex = result.destination.index;
+    // items[sourceIndex] = boards[destinationIndex];
+    // items[destinationIndex] = boards[sourceIndex];
+    // setBoards(items);
   }
   return (
     <AppLayout>
-      <div>
-        <h1>Board Inside Page</h1>
-      </div>
-
+      <pre>{boardId}</pre>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
       <DragDropContext onDragEnd={handleOnDragEnd}>
-        <Droppable droppableId="boards" direction="horizontal">
-          {(provided) => (
-            <div
-              className="grid grid-cols-4 gap-2 "
-              {...provided.droppableProps}
-              ref={provided.innerRef}
-            >
-              {boards.map((board, index) => (
-                <Draggable
-                  key={board.id}
-                  draggableId={board.id.toString()}
-                  index={index}
+        <div className="flex flex-wrap whitespace-nowrap">
+          {boardColumns?.map((column) => (
+            <Droppable droppableId={column.id!} key={column.id}>
+              {(provided) => (
+                <div
+                  className="flex flex-col gap-3 p-2 rounded-sm bg-slate-50 w-[300px]"
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
                 >
-                  {(provided) => (
-                    <div
-                      className="bg-white border border-solid border-slate-300"
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
+                  <p className="m-0 font-semibold">{column.name}</p>
+                  {column.cards?.map((card, index) => (
+                    <Draggable
+                      key={card?.id}
+                      draggableId={card?.id!.toString()}
+                      index={index}
                     >
-                      <h2 className="m-0 ">{board.title}</h2>
-                      <p>{board.description}</p>
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-            </div>
-          )}
-        </Droppable>
+                      {(provided) => (
+                        <div
+                          className="bg-white border border-solid border-slate-300"
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                        >
+                          <h2 className="m-0 ">{card.title}</h2>
+                          <p>{card.description}</p>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                </div>
+              )}
+            </Droppable>
+          ))}
+        </div>
       </DragDropContext>
     </AppLayout>
   );
 };
 
-export default BoardInsidePage;
+export default withFirebaseProtection(BoardInsidePage);
 
-// export const getServerSideProps: GetServerSideProps = async () => {
-//   resetServerContext(); // <-- CALL RESET SERVER CONTEXT, SERVER SIDE
-//   return { props: { data: [] } };
-// };
+export const getServerSideProps: GetServerSideProps = async ({ query }) => {
+  return { props: { boardId: query.boardId } };
+};
