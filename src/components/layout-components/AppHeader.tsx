@@ -9,6 +9,7 @@ import {
   Text,
   UnstyledButton,
 } from "@mantine/core";
+import Link from "next/link";
 import React from "react";
 import { HiLogout } from "react-icons/hi";
 
@@ -32,7 +33,9 @@ const AppHeader = () => {
           />
         </MediaQuery> */}
 
-        <Text>React Board</Text>
+        <Link href={"/"} className="no-underline text-slate-800">
+          React Board
+        </Link>
 
         <Menu shadow="md" width={200}>
           <Menu.Target>
