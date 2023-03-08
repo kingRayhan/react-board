@@ -26,6 +26,7 @@ import {
   ResponderProvided,
 } from "react-beautiful-dnd";
 import { useForm } from "react-hook-form";
+import { queryClient } from "../_app";
 
 const items = [
   {
@@ -73,81 +74,34 @@ const BoardInsidePage: NextPage<PageProp> = ({ boardId }) => {
     columnController.getColumnsByBoardId(boardId)
   );
 
-  const [boardColumns, setBoardColumns] = React.useState<IBoardColumn[]>([
-    {
-      index: 0,
-      id: "1",
-      name: "To Do",
-      cards: [
-        {
-          id: "1",
-          title: "Board 1",
-          description: "This is board 1",
-          index: 0,
-        },
-        {
-          id: "2",
-          title: "Board 2",
-          description: "This is board 2",
-          index: 1,
-        },
-        {
-          id: "3",
-          title: "Board 3",
-          description: "This is board 3",
-          index: 2,
-        },
-      ],
-    },
-    {
-      index: 1,
-      id: "2",
-      name: "In Progress",
-    },
-    {
-      index: 2,
-      id: "3",
-      name: "Done",
-    },
-    {
-      index: 3,
-      id: "4",
-      name: "Issues",
-    },
-    {
-      index: 4,
-      id: "4",
-      name: "In Reviews",
-    },
-    {
-      index: 5,
-      id: "5",
-      name: "In Reviews 5",
-    },
-    {
-      index: 6,
-      id: "6",
-      name: "In Reviews 6",
-    },
-    {
-      index: 7,
-      id: "7",
-      name: "In Reviews 7",
-    },
-    {
-      index: 8,
-      id: "8",
-      name: "In Reviews 8",
-    },
-  ]);
-
   const handleChangeBoardName = (e: React.ChangeEvent<HTMLInputElement>) => {
     boardController.upDateBoard(board?.id!, { name: e.target.value });
   };
 
   function handleOnDragEnd(result: DropResult, provided: ResponderProvided) {
-    console.log(result);
     if (!result.destination) return;
+
+    if (result.type === "COLUMN") {
+      const items = Array.from(columns!);
+      const sourceColumn = items[result.source.index];
+      const destinationColumn = items[result.destination.index];
+
+      const [reorderedItem] = items.splice(result.source.index, 1);
+      items.splice(result.destination.index, 0, reorderedItem);
+      queryClient.setQueryData(
+        [`boards/${boardId}/column`],
+        items.map((item, index) => ({ ...item, index }))
+      );
+
+      // update to firebase
+      columnController.updateColumn(boardId, sourceColumn.id!, {
+        index: result.destination.index,
+      });
+      columnController.updateColumn(boardId, destinationColumn.id!, {
+        index: result.source.index,
+      });
+      return;
+    }
   }
 
   useEffect(() => {
@@ -228,28 +182,30 @@ const BoardInsidePage: NextPage<PageProp> = ({ boardId }) => {
     >
       <pre>{JSON.stringify(board, null, 2)}</pre>
       <DragDropContext onDragEnd={handleOnDragEnd}>
-        <Droppable droppableId="board" direction="horizontal">
+        <Droppable droppableId="board" type="COLUMN" direction="horizontal">
           {(provided) => (
             <div
               className="flex "
               {...provided.droppableProps}
               ref={provided.innerRef}
             >
-              {columns?.map((column, index) => (
-                <BoardColumn
-                  key={index}
-                  column={column}
-                  index={index}
-                  onColumnAction={function (
-                    action: "delete" | "edit",
-                    column: IBoardColumn
-                  ) {
-                    if (action === "delete") {
-                      handleDeleteColumn(column);
-                    }
-                  }}
-                />
-              ))}
+              {columns
+                ?.sort((a, b) => a?.index! - b?.index!)
+                .map((column, index) => (
+                  <BoardColumn
+                    key={index}
+                    column={column}
+                    index={index}
+                    onColumnAction={function (
+                      action: "delete" | "edit",
+                      column: IBoardColumn
+                    ) {
+                      if (action === "delete") {
+                        handleDeleteColumn(column);
+                      }
+                    }}
+                  />
+                ))}
               {provided.placeholder}
             </div>
           )}
