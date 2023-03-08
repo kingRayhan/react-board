@@ -1,39 +1,31 @@
-import AppLayout from "@/components/layouts/AppLayout";
-import { GetServerSideProps, NextPage } from "next";
-import React, { useCallback, useMemo } from "react";
-import dynamic from "next/dynamic";
-import {
-  DropResult,
-  OnDragEndResponder,
-  ResponderProvided,
-} from "react-beautiful-dnd";
+import { BoardController } from "@/app/controllers/boardController";
+import { ColumnController } from "@/app/controllers/columnController";
+import { firebaseApp } from "@/app/firebase/app.firebase";
 import { IBoardColumn } from "@/app/models/board-column.model";
 import withFirebaseProtection from "@/auth/withFirebaseProtection";
-import { ColumnController } from "@/app/controllers/columnController";
-import { getFirestore } from "firebase/firestore";
-import { firebaseApp } from "@/app/firebase/app.firebase";
+import BoardColumn from "@/components/BoardColumn";
+import AppLayout from "@/components/layouts/AppLayout";
+import {
+  Anchor,
+  Button,
+  Input,
+  Modal,
+  Skeleton,
+  Space,
+  Text,
+} from "@mantine/core";
+import { modals } from "@mantine/modals";
 import { useQuery } from "@tanstack/react-query";
-const DragDropContext = dynamic(
-  () =>
-    import("react-beautiful-dnd").then((mod) => {
-      return mod.DragDropContext;
-    }),
-  { ssr: false }
-);
-const Droppable = dynamic(
-  () =>
-    import("react-beautiful-dnd").then((mod) => {
-      return mod.Droppable;
-    }),
-  { ssr: false }
-);
-const Draggable = dynamic(
-  () =>
-    import("react-beautiful-dnd").then((mod) => {
-      return mod.Draggable;
-    }),
-  { ssr: false }
-);
+import { getFirestore } from "firebase/firestore";
+import { GetServerSideProps, NextPage } from "next";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  DragDropContext,
+  Droppable,
+  DropResult,
+  ResponderProvided,
+} from "react-beautiful-dnd";
+import { useForm } from "react-hook-form";
 
 const items = [
   {
@@ -60,6 +52,22 @@ interface PageProp {
 const BoardInsidePage: NextPage<PageProp> = ({ boardId }) => {
   const db = getFirestore(firebaseApp);
   const columnController = useMemo(() => new ColumnController(db), [db]);
+  const boardController = useMemo(() => new BoardController(db), [db]);
+  const boardNameInputRef = React.useRef<HTMLInputElement>(null);
+  const [boardNameInputWidth, setBoardNameInputWith] = useState(0);
+  const [modelOpen, setModelOpen] = useState(false);
+
+  const { data: board, refetch: refetch__board } = useQuery(
+    [`boards/${boardId}`],
+    () => boardController.getBoardDetails(boardId)
+  );
+
+  const { data: columns, refetch: refetch__columns } = useQuery(
+    [`boards/${boardId}/column`],
+    () => {
+      return columnController.getColumnsByBoardId(boardId);
+    }
+  );
 
   const { data } = useQuery([`columns/${boardId}`], () =>
     columnController.getColumnsByBoardId(boardId)
@@ -106,57 +114,161 @@ const BoardInsidePage: NextPage<PageProp> = ({ boardId }) => {
       id: "4",
       name: "Issues",
     },
+    {
+      index: 4,
+      id: "4",
+      name: "In Reviews",
+    },
+    {
+      index: 5,
+      id: "5",
+      name: "In Reviews 5",
+    },
+    {
+      index: 6,
+      id: "6",
+      name: "In Reviews 6",
+    },
+    {
+      index: 7,
+      id: "7",
+      name: "In Reviews 7",
+    },
+    {
+      index: 8,
+      id: "8",
+      name: "In Reviews 8",
+    },
   ]);
 
+  const handleChangeBoardName = (e: React.ChangeEvent<HTMLInputElement>) => {
+    boardController.upDateBoard(board?.id!, { name: e.target.value });
+  };
+
   function handleOnDragEnd(result: DropResult, provided: ResponderProvided) {
-    // if (!result.destination) return;
-    // const items = [...boards];
-    // const sourceIndex = result.source.index;
-    // const destinationIndex = result.destination.index;
-    // items[sourceIndex] = boards[destinationIndex];
-    // items[destinationIndex] = boards[sourceIndex];
-    // setBoards(items);
+    console.log(result);
+    if (!result.destination) return;
   }
+
+  useEffect(() => {
+    refetch__board();
+  }, [boardId, refetch__board]);
+
+  const { register, handleSubmit, setValue } = useForm({
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  const handleSubmitCreateNewColumn = (data: any) => {
+    try {
+      columnController.createColumnForBoard(boardId, {
+        name: data.name,
+        index: columns?.length,
+      });
+      setModelOpen(false);
+      refetch__columns();
+    } catch (error) {}
+  };
+
+  const handleDeleteColumn = (column: IBoardColumn) => {
+    modals.openConfirmModal({
+      title: `Sure to delete column "${column.name!}"`,
+      centered: true,
+      children: (
+        <Text size="sm">
+          Are you sure you want to delete column <b>{column.name!}</b>? This
+          action cannot be undone. All cards in this column will be deleted.
+        </Text>
+      ),
+      labels: { confirm: "Delete", cancel: "No don't delete it" },
+      confirmProps: { color: "red" },
+      onCancel: () => console.log("Cancel"),
+      onConfirm: async () => {
+        await columnController.deleteColumn(board?.id!, column.id!);
+        refetch__columns();
+      },
+    });
+  };
+
   return (
-    <AppLayout>
-      <pre>{boardId}</pre>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-      <DragDropContext onDragEnd={handleOnDragEnd}>
-        <div className="flex flex-wrap whitespace-nowrap">
-          {boardColumns?.map((column) => (
-            <Droppable droppableId={column.id!} key={column.id}>
-              {(provided) => (
-                <div
-                  className="flex flex-col gap-3 p-2 rounded-sm bg-slate-50 w-[300px]"
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                >
-                  <p className="m-0 font-semibold">{column.name}</p>
-                  {column.cards?.map((card, index) => (
-                    <Draggable
-                      key={card?.id}
-                      draggableId={card?.id!.toString()}
-                      index={index}
-                    >
-                      {(provided) => (
-                        <div
-                          className="bg-white border border-solid border-slate-300"
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          <h2 className="m-0 ">{card.title}</h2>
-                          <p>{card.description}</p>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                </div>
+    <AppLayout
+      fluidLayout
+      Leading={
+        <>
+          <div className="flex items-center gap-3">
+            <Text className="flex font-semibold text-gray-800">
+              <span>Boards/</span>
+              {board ? (
+                <input
+                  defaultValue={board?.name}
+                  onBlur={handleChangeBoardName}
+                  ref={boardNameInputRef}
+                  className="border-none"
+                  style={{
+                    width: boardNameInputRef
+                      ? boardNameInputRef.current?.value.length + "ch"
+                      : "auto",
+                  }}
+                />
+              ) : (
+                <Skeleton width={100} height={25} />
               )}
-            </Droppable>
-          ))}
-        </div>
+            </Text>
+            <Anchor
+              size={"sm"}
+              component="button"
+              onClick={() => setModelOpen(true)}
+            >
+              Add Column
+            </Anchor>
+          </div>
+        </>
+      }
+    >
+      <pre>{JSON.stringify(board, null, 2)}</pre>
+      <DragDropContext onDragEnd={handleOnDragEnd}>
+        <Droppable droppableId="board" direction="horizontal">
+          {(provided) => (
+            <div
+              className="flex "
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+            >
+              {columns?.map((column, index) => (
+                <BoardColumn
+                  key={index}
+                  column={column}
+                  index={index}
+                  onColumnAction={function (
+                    action: "delete" | "edit",
+                    column: IBoardColumn
+                  ) {
+                    if (action === "delete") {
+                      handleDeleteColumn(column);
+                    }
+                  }}
+                />
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
       </DragDropContext>
+
+      <Modal
+        opened={modelOpen}
+        onClose={() => setModelOpen(false)}
+        title="New Column"
+      >
+        <form action="#" onSubmit={handleSubmit(handleSubmitCreateNewColumn)}>
+          <Input.Wrapper label="Column Name">
+            <Input placeholder="Enter board name" {...register("name")} />
+          </Input.Wrapper>
+          <Space h={"sm"} />
+          <Button type="submit">Save</Button>
+        </form>
+      </Modal>
     </AppLayout>
   );
 };

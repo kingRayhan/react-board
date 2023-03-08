@@ -1,6 +1,7 @@
 import { FirebaseAuthContextProvider } from "@/auth/AuthContext";
 import "@/styles/globals.scss";
 import { MantineProvider } from "@mantine/core";
+import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import NextHeadSeo from "next-head-seo";
 import { AppProps } from "next/app";
@@ -31,16 +32,18 @@ export default function App(props: AppProps) {
           colorScheme: "light",
         }}
       >
-        <FirebaseAuthContextProvider>
-          <NextHeadSeo
-            title="React Board"
-            canonical="https://board.rayhan.dev"
-          />
-          <Notifications />
-          <QueryClientProvider client={queryClient}>
-            <Component {...pageProps} />
-          </QueryClientProvider>
-        </FirebaseAuthContextProvider>
+        <ModalsProvider>
+          <FirebaseAuthContextProvider>
+            <NextHeadSeo
+              title="React Board"
+              canonical="https://board.rayhan.dev"
+            />
+            <Notifications />
+            <QueryClientProvider client={queryClient}>
+              <Component {...pageProps} />
+            </QueryClientProvider>
+          </FirebaseAuthContextProvider>
+        </ModalsProvider>
       </MantineProvider>
     </>
   );

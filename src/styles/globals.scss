@@ -1,3 +1,14 @@
 // @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.board-column {
+  box-sizing: border-box;
+  display: inline-block;
+  height: 100%;
+  margin: 0 4px;
+  vertical-align: top;
+  white-space: nowrap;
+  width: 272px;
+  @apply bg-slate-200 px-2 py-1 flex-none;
+}

@@ -6,10 +6,8 @@ import {
   Firestore,
   getDoc,
   getDocs,
-  orderBy,
   query,
   serverTimestamp,
-  setDoc,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -46,9 +44,9 @@ export class BoardController {
     });
   }
 
-  upDateBoard(id: string, board: IBoard) {
-    const docRef = doc(this._db, `boards/${id}`);
-    return setDoc(docRef, {
+  upDateBoard(boardId: string, board: IBoard) {
+    const docRef = doc(this._db, `boards/${boardId}`);
+    return updateDoc(docRef, {
       ...board,
       updatedAt: serverTimestamp(),
     });

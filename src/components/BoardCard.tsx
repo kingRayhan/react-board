@@ -23,7 +23,7 @@ const BoardCard: React.FC<BoardCardProps> = ({
     <Draggable key={board.id} draggableId={board.id!.toString()} index={index}>
       {(provided) => (
         <div
-          className="flex flex-col justify-start p-2 border border-gray-300 hover:bg-slate-50 cursor-pointer border-solid rounded-md min-h-[65px] shadow-sm"
+          className="flex flex-col justify-start p-2 border border-gray-300 hover:bg-slate-50 cursor-pointer border-solid min-h-[65px] shadow-sm"
           onClick={onClick}
           ref={provided.innerRef}
           {...provided.draggableProps}

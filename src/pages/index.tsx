@@ -12,13 +12,14 @@ import {
   Modal,
   Skeleton,
   Space,
+  Text,
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { QueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { getFirestore } from "firebase/firestore";
 import { useRouter } from "next/router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -133,12 +134,29 @@ const HomePage = () => {
   // sort boards by index asc
   const sortedBoards = boards?.sort((a, b) => a?.index! - b?.index!);
 
+  useEffect(() => {
+    refetch__boards();
+  }, [authUser?.uid!]);
+
   return (
     <>
-      <AppLayout>
-        <Title order={4}>Boards</Title>
+      <AppLayout
+        fluidLayout
+        Leading={
+          <div className="flex items-center gap-2">
+            <Text className="font-semibold text-gray-800">Boards</Text>
+            <Anchor
+              size={"sm"}
+              component="button"
+              onClick={() => setCreateModalOpen(true)}
+            >
+              New Board
+            </Anchor>
+          </div>
+        }
+      >
         <Space h={"lg"} />
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           {loading__boards &&
             Array.from({ length: 3 }).map((_, i) => (
               <Skeleton
@@ -160,7 +178,7 @@ const HomePage = () => {
           <Droppable droppableId="boards" direction="horizontal">
             {(provided) => (
               <div
-                className="grid grid-cols-4 gap-2 "
+                className="grid grid-cols-5 gap-2 "
                 {...provided.droppableProps}
                 ref={provided.innerRef}
               >
@@ -173,7 +191,7 @@ const HomePage = () => {
                     onClickDelete={() => handleOnDeleteBoard(board.id!)}
                     onClickEdit={() => {
                       setEditableBoard(board);
-                      setValue("name", board.name);
+                      setValue("name", board?.name || "");
                       setCreateModalOpen(true);
                     }}
                   />
@@ -183,12 +201,6 @@ const HomePage = () => {
             )}
           </Droppable>
         </DragDropContext>
-
-        <Space h={"lg"} />
-
-        <Anchor component="button" onClick={() => setCreateModalOpen(true)}>
-          New Board
-        </Anchor>
       </AppLayout>
       <Modal
         opened={createModalOpen}

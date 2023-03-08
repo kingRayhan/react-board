@@ -7,13 +7,19 @@ import {
   MediaQuery,
   Menu,
   Text,
+  Title,
   UnstyledButton,
 } from "@mantine/core";
 import Link from "next/link";
 import React from "react";
 import { HiLogout } from "react-icons/hi";
 
-const AppHeader = () => {
+interface Prop {
+  Leading?: React.ReactNode;
+  Actions?: React.ReactNode;
+}
+
+const AppHeader: React.FC<Prop> = ({ Leading, Actions }) => {
   const { authUser } = useAuth();
 
   const handleClickLogout = () => {
@@ -33,10 +39,16 @@ const AppHeader = () => {
           />
         </MediaQuery> */}
 
-        <Link href={"/"} className="no-underline text-slate-800">
-          React Board
-        </Link>
-
+        <div className="flex items-center gap-6">
+          <Link
+            href={"/"}
+            className="px-2 text-lg font-semibold no-underline border border-gray-400 border-dashed text-slate-800"
+          >
+            React Board
+          </Link>
+          <div area-aria-label="Leading">{Leading}</div>
+        </div>
+        <div area-aria-label="Actions">{Actions}</div>
         <Menu shadow="md" width={200}>
           <Menu.Target>
             <UnstyledButton className="flex items-center gap-1">
